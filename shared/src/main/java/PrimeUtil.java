@@ -1,5 +1,3 @@
-package shared;
-
 public class PrimeUtil {
 
     public static boolean isPrimeNumber(int number) {
