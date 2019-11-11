@@ -6,7 +6,12 @@
 
 # IntelliJ files
 .idea/*
+
+# Target folders
 target/*
+host/target/*
+client/target/*
+shared/target/*
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

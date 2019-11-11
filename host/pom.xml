@@ -6,18 +6,43 @@
 
     <groupId>primeloadbalancer</groupId>
     <artifactId>host</artifactId>
+    <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>8</source>
-                    <target>8</target>
-                </configuration>
-            </plugin>
-        </plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <source>8</source>
+                <target>8</target>
+            </configuration>
+        </plugin>
+
+        <!--<plugin>-->
+            <!--<artifactId>maven-resources-plugin</artifactId>-->
+            <!--<version>3.1.0</version>-->
+            <!--<executions>-->
+                <!--<execution>-->
+                    <!--<id>copy-resources</id>-->
+                    <!--&lt;!&ndash; here the phase you need &ndash;&gt;-->
+                    <!--<phase>prepare-package</phase>-->
+                    <!--<goals>-->
+                        <!--<goal>copy-resources</goal>-->
+                    <!--</goals>-->
+                    <!--<configuration>-->
+                        <!--<outputDirectory>${basedir}/target/config</outputDirectory>-->
+                        <!--<resources>-->
+                            <!--<resource>-->
+                                <!--<directory>src/config</directory>-->
+                                <!--<filtering>true</filtering>-->
+                            <!--</resource>-->
+                        <!--</resources>-->
+                    <!--</configuration>-->
+                <!--</execution>-->
+            <!--</executions>-->
+        <!--</plugin>-->
+    </plugins>
     </build>
 
     <dependencies>
