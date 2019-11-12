@@ -45,10 +45,10 @@
     </build>
 
     <dependencies>
-    <dependency>
-        <groupId>primeloadbalancer</groupId>
-        <artifactId>shared</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
+        <dependency>
+            <groupId>primeloadbalancer</groupId>
+            <artifactId>shared</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 </project>

@@ -1,5 +1,6 @@
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import org.jetbrains.annotations.NotNull;
 
 public class Config {
 
@@ -9,14 +10,20 @@ public class Config {
     @Parameter(names = { "-u"}, description = "RabbitMQ username", required = true)
     String username;
 
-    @Parameter(names = { "-p"}, description = "RabbitMQ password", required = true)
+    @Parameter(names = { "-pa"}, description = "RabbitMQ password", required = true)
     String password;
 
-    private Config() {
+    @Parameter(names = { "-p"}, description = "RabbitMQ port")
+    Integer port = 5672;
 
-    }
+    private Config() {}
 
-    public static Config readConfigFromCLIArgs(String[] argv) {
+    /**
+     * Creates a config object using the CLI arguments
+     * @param argv CLI arguments
+     * @return Config instance instantiated with CLI arguments
+     */
+    public static Config readConfigFromCLIArgs(@NotNull String[] argv) {
 
         Config config = new Config();
 
