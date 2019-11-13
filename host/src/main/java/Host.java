@@ -23,12 +23,7 @@ class Host {
         InitializeRabbitMQConnection(factory);
     }
 
-    public void StartTaskExecution(List<Integer> numbersToCheck) {
-
-    }
-
-
-    public void InitializeRabbitMQConnection(ConnectionFactory factory) {
+    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) {
         try {
             System.out.println("Creating connection...");
             Connection connection = factory.newConnection();
@@ -38,27 +33,18 @@ class Host {
             channel = connection.createChannel();
             System.out.println("Channel created successfully with number " + channel.getChannelNumber());
 
-            System.out.println("Declaring exchanges...");
-            //Producer->Consumer
-            channel.exchangeDeclare(PRODUCER_EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
-            //Consumer->Producer
-            channel.exchangeDeclare(CONSUMER_EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
-            System.out.println("Exchanges declared successfully");
-
-            System.out.println("Declaring queues...");
-            //queueDeclare(name, durable, exclusive, autoDelete, arguments)
-            channel.queueDeclare(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), false, false, true, null);
-            System.out.println("Queues declared successfully");
-
-            System.out.println("Binding queues...");
-            channel.queueBind(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName());
-            System.out.println("Binding of queues completed successfully");
+            CreateDefaultExchanges(channel);
+            CreateDefaultQueues(channel);
         }
         catch (TimeoutException e) {
             System.out.println("Timeout while trying to connect to the RabbitMQ server");
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void StartTaskExecution(List<Integer> numbersToCheck) {
+
     }
 
 }
