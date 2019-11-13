@@ -13,7 +13,7 @@ class Host {
 
     private Channel channel;
 
-    Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) {
+    Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(rabbitMQHost);
         factory.setPort(rabbitMQPort);
@@ -23,7 +23,7 @@ class Host {
         InitializeRabbitMQConnection(factory);
     }
 
-    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) {
+    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
             System.out.println("Creating connection...");
             Connection connection = factory.newConnection();
@@ -38,8 +38,6 @@ class Host {
         }
         catch (TimeoutException e) {
             System.out.println("Timeout while trying to connect to the RabbitMQ server");
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

@@ -4,6 +4,9 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Config {
 
     @Parameter(names = { "-rh"}, description = "RabbitMQ host", required = true)
@@ -33,6 +36,19 @@ public class Config {
                 .addObject(config)
                 .build()
                 .parse(argv);
+
+        return config;
+    }
+
+    public static Config readConfigFromCLIArgsWithAdditionalConfig(@NotNull String[] argv, @NotNull List<?> additonalConfig) {
+
+        Config config = new Config();
+
+        JCommander.Builder builder = JCommander.newBuilder().addObject(config);
+
+        additonalConfig.forEach(builder::addObject);
+
+        builder.build().parse(argv);
 
         return config;
     }

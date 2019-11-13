@@ -6,14 +6,16 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
-import static util.RabbitMQUtils.CreateDefaultExchanges;
-import static util.RabbitMQUtils.CreateDefaultQueues;
+import static util.RabbitMQUtils.*;
 
 public class Client {
 
     private Channel channel;
+    private String name;
 
-    Client(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) {
+    Client(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort, @NotNull String clientName) throws IOException {
+        name = clientName;
+
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(rabbitMQHost);
         factory.setPort(rabbitMQPort);
@@ -21,9 +23,10 @@ public class Client {
         factory.setPassword(rabbitMQPass);
 
         InitializeRabbitMQConnection(factory);
+        NotifyProducer();
     }
 
-    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) {
+    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
             System.out.println("Creating connection...");
             Connection connection = factory.newConnection();
@@ -38,8 +41,10 @@ public class Client {
         }
         catch (TimeoutException e) {
             System.out.println("Timeout while trying to connect to the RabbitMQ server");
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+    }
+
+    private void NotifyProducer() throws IOException {
+        channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName(), null, name.getBytes());
     }
 }
