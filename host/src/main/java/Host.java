@@ -1,4 +1,5 @@
 import com.rabbitmq.client.*;
+import com.sun.org.apache.xml.internal.security.Init;
 import org.jetbrains.annotations.NotNull;
 import util.RabbitMQUtils;
 
@@ -10,7 +11,6 @@ import static util.RabbitMQUtils.*;
 
 class Host {
 
-    private Connection connection;
     private Channel channel;
 
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) {
@@ -20,9 +20,18 @@ class Host {
         factory.setUsername(rabbitMQUser);
         factory.setPassword(rabbitMQPass);
 
+        InitializeRabbitMQConnection(factory);
+    }
+
+    public void StartTaskExecution(List<Integer> numbersToCheck) {
+
+    }
+
+
+    public void InitializeRabbitMQConnection(ConnectionFactory factory) {
         try {
             System.out.println("Creating connection...");
-            connection = factory.newConnection();
+            Connection connection = factory.newConnection();
             System.out.println("Connection created successfully");
 
             System.out.println("Creating channel...");
@@ -50,15 +59,6 @@ class Host {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public void StartTaskExecution(List<Integer> numbersToCheck) {
-
-    }
-
-
-    public void CreateExchanges() {
-
     }
 
 }
