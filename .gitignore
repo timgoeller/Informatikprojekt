@@ -4,9 +4,6 @@
 # Log file
 *.log
 
-# IntelliJ files
-.idea/*
-
 # Target folders
 target/*
 host/target/*
