@@ -55,7 +55,7 @@ class Host {
                 });
     }
 
-    private void startTaskExecution(List<Integer> numbersToCheck) {
+    void startTaskExecution(List<Integer> numbersToCheck) {
         numbersToCheck.forEach(e -> scheduler.addTask(e));
     }
 
