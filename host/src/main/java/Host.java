@@ -1,4 +1,5 @@
 import com.rabbitmq.client.*;
+import javafx.concurrent.Task;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -10,9 +11,12 @@ import static util.RabbitMQUtils.*;
 class Host {
 
     private Channel channel;
+    private List<RegisteredClient> registeredClients;
+    private Scheduler scheduler;
 
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {
         ConnectionFactory factory = new ConnectionFactory();
+        scheduler = new Scheduler();
         factory.setHost(rabbitMQHost);
         factory.setPort(rabbitMQPort);
         factory.setUsername(rabbitMQUser);
@@ -44,23 +48,15 @@ class Host {
         channel.basicConsume(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), true, "myConsumerTag",
                 new DefaultConsumer(channel) {
                     @Override
-                    public void handleDelivery(String consumerTag,
-                                               Envelope envelope,
-                                               AMQP.BasicProperties properties,
-                                               byte[] body)
-                            throws IOException
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body)
                     {
-                        String routingKey = envelope.getRoutingKey();
-                        String contentType = properties.getContentType();
-                        long deliveryTag = envelope.getDeliveryTag();
-                        // (process the message components here ...)
-                        System.out.println("Recieved new consumer " + new String(body));
+                        registeredClients.add(new RegisteredClient(new String(body)));
                     }
                 });
     }
 
-    public void startTaskExecution(List<Integer> numbersToCheck) {
-
+    private void startTaskExecution(List<Integer> numbersToCheck) {
+        numbersToCheck.forEach(e -> scheduler.addTask(e));
     }
 
 }
