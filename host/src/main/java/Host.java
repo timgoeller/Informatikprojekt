@@ -57,6 +57,10 @@ class Host {
 
     void startTaskExecution(List<Integer> numbersToCheck) {
         numbersToCheck.forEach(e -> scheduler.addTask(e));
+
+        while(scheduler.tasksLeft()) {
+            scheduler.scheduleTasks(registeredClients);
+        }
     }
 
 }

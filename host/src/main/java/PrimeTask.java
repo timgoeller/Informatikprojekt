@@ -1,7 +1,8 @@
-public class PrimeTask {
+class PrimeTask {
     int numberToCheck;
+    boolean completed = false;
 
-    public PrimeTask(int numberToCheck) {
+    PrimeTask(int numberToCheck) {
         this.numberToCheck = numberToCheck;
     }
 }
