@@ -1,7 +1,5 @@
 import com.rabbitmq.client.*;
-import com.sun.org.apache.xml.internal.security.Init;
 import org.jetbrains.annotations.NotNull;
-import util.RabbitMQUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,10 +18,11 @@ class Host {
         factory.setUsername(rabbitMQUser);
         factory.setPassword(rabbitMQPass);
 
-        InitializeRabbitMQConnection(factory);
+        initializeRabbitMQConnection(factory);
+        listenForNewClients();
     }
 
-    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
+    private void initializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
             System.out.println("Creating connection...");
             Connection connection = factory.newConnection();
@@ -41,7 +40,26 @@ class Host {
         }
     }
 
-    public void StartTaskExecution(List<Integer> numbersToCheck) {
+    private void listenForNewClients() throws IOException {
+        channel.basicConsume(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), true, "myConsumerTag",
+                new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag,
+                                               Envelope envelope,
+                                               AMQP.BasicProperties properties,
+                                               byte[] body)
+                            throws IOException
+                    {
+                        String routingKey = envelope.getRoutingKey();
+                        String contentType = properties.getContentType();
+                        long deliveryTag = envelope.getDeliveryTag();
+                        // (process the message components here ...)
+                        System.out.println("Recieved new consumer " + new String(body));
+                    }
+                });
+    }
+
+    public void startTaskExecution(List<Integer> numbersToCheck) {
 
     }
 

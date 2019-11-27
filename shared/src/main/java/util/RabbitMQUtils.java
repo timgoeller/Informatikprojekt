@@ -9,9 +9,10 @@ public class RabbitMQUtils {
     public final static String PRODUCER_EXCHANGE_NAME = "producer_events";
     public final static String CONSUMER_EXCHANGE_NAME = "consumer_events";
 
-    public static enum Queue
+    public enum Queue
     {
-        CONSUMER_REGISTRATION_QUEUE("consumer_registration");
+        CONSUMER_REGISTRATION_QUEUE("consumer_registration"),
+        CONSUMER_PRODUCTION_QUEUE("consumer_prod");
 
         private String name;
 

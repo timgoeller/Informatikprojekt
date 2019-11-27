@@ -22,11 +22,11 @@ public class Client {
         factory.setUsername(rabbitMQUser);
         factory.setPassword(rabbitMQPass);
 
-        InitializeRabbitMQConnection(factory);
-        NotifyProducer();
+        initializeRabbitMQConnection(factory);
+        notifyProducer();
     }
 
-    private void InitializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
+    private void initializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
             System.out.println("Creating connection...");
             Connection connection = factory.newConnection();
@@ -38,13 +38,30 @@ public class Client {
 
             CreateDefaultExchanges(channel);
             CreateDefaultQueues(channel);
+            createClientQueue(channel);
         }
         catch (TimeoutException e) {
             System.out.println("Timeout while trying to connect to the RabbitMQ server");
         }
     }
 
-    private void NotifyProducer() throws IOException {
+    private void notifyProducer() throws IOException {
+        System.out.println("Notifying publisher of creation...");
         channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName(), null, name.getBytes());
+    }
+
+    private void createClientQueue(@NotNull Channel channel) throws IOException{
+        System.out.println("Declaring custom queue for data exchange...");
+        //queueDeclare(name, durable, exclusive, autoDelete, arguments)
+        channel.queueDeclare(getProductionQueueName(), false, false, true, null);
+        System.out.println("Custom queue declared successfully");
+
+        System.out.println("Binding custom queue for data exchange...");
+        channel.queueBind(getProductionQueueName(), PRODUCER_EXCHANGE_NAME, getProductionQueueName());
+        System.out.println("Binding of custom queue completed successfully");
+    }
+
+    private String getProductionQueueName() {
+        return Queue.CONSUMER_PRODUCTION_QUEUE.getName() + "_" + name;
     }
 }
