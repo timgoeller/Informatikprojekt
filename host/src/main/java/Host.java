@@ -1,8 +1,9 @@
 import com.rabbitmq.client.*;
-import javafx.concurrent.Task;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -11,7 +12,7 @@ import static util.RabbitMQUtils.*;
 class Host {
 
     private Channel channel;
-    private List<RegisteredClient> registeredClients;
+    private List<RegisteredClient> registeredClients = Collections.synchronizedList(new ArrayList<>());
     private Scheduler scheduler;
 
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {

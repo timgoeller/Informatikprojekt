@@ -1,4 +1,6 @@
-package PACKAGE_NAME;
+import java.io.*;
 
-public class ClientReturn {
+public class ClientReturn implements Serializable {
+    Integer numberToCheck;
+    boolean isPrime;
 }

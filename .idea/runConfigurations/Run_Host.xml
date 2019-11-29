@@ -2,7 +2,7 @@
   <configuration default="false" name="Run Host" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="Program" />
     <module name="host" />
-    <option name="PROGRAM_PARAMETERS" value="-rh 87.152.110.156 -u inf_proj -pa inf_proj" />
+    <option name="PROGRAM_PARAMETERS" value="-rh 127.0.0.1 -u inf_proj -pa inf_proj" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

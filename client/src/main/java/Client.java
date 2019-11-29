@@ -1,7 +1,7 @@
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.*;
 import org.jetbrains.annotations.NotNull;
+import util.ByteConverter;
+import util.PrimeUtil;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
@@ -23,6 +23,7 @@ public class Client {
         factory.setPassword(rabbitMQPass);
 
         initializeRabbitMQConnection(factory);
+        listenForTasks();
         notifyProducer();
     }
 
@@ -59,6 +60,25 @@ public class Client {
         System.out.println("Binding custom queue for data exchange...");
         channel.queueBind(getProductionQueueName(), PRODUCER_EXCHANGE_NAME, getProductionQueueName());
         System.out.println("Binding of custom queue completed successfully");
+    }
+
+    private void listenForTasks() throws IOException {
+        channel.basicConsume(Queue.CONSUMER_PRODUCTION_QUEUE.getName(), true, name,
+                new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        Integer numberToCheck = Integer.valueOf(new String(body));
+                        executeTask(numberToCheck);
+                    }
+                });
+    }
+
+    private void executeTask(Integer numberToCheck) throws IOException {
+        boolean isPrime = PrimeUtil.isPrimeNumber(numberToCheck);
+        ClientReturn clientReturn = new ClientReturn();
+        clientReturn.isPrime = isPrime;
+        clientReturn.numberToCheck = numberToCheck;
+        channel.basicPublish(Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, ByteConverter.objectToBytes(clientReturn));
     }
 
     private String getProductionQueueName() {
