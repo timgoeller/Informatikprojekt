@@ -12,7 +12,8 @@ public class RabbitMQUtils {
     public enum Queue
     {
         CONSUMER_REGISTRATION_QUEUE("consumer_registration"),
-        CONSUMER_PRODUCTION_QUEUE("consumer_prod");
+        CONSUMER_PRODUCTION_QUEUE("consumer_prod"),
+        CONSUMER_DATA_RETURN_QUEUE("data_return");
 
         private String name;
 
@@ -38,10 +39,12 @@ public class RabbitMQUtils {
         System.out.println("Declaring queues...");
         //queueDeclare(name, durable, exclusive, autoDelete, arguments)
         channel.queueDeclare(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), false, false, true, null);
+        channel.queueDeclare(Queue.CONSUMER_PRODUCTION_QUEUE.getName(), false, false, true, null);
         System.out.println("Queues declared successfully");
 
         System.out.println("Binding queues...");
         channel.queueBind(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName());
+        channel.queueBind(Queue.CONSUMER_PRODUCTION_QUEUE.getName(), CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName());
         System.out.println("Binding of queues completed successfully");
     }
 }

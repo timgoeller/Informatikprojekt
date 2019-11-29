@@ -48,18 +48,17 @@ class Host {
         channel.basicConsume(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), true, "myConsumerTag",
                 new DefaultConsumer(channel) {
                     @Override
-                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body)
-                    {
-                        registeredClients.add(new RegisteredClient(new String(body)));
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        registeredClients.add(new RegisteredClient(new String(body), channel));
                     }
                 });
     }
 
-    void startTaskExecution(List<Integer> numbersToCheck) {
+    void startTaskExecution(List<Integer> numbersToCheck) throws IOException {
         numbersToCheck.forEach(e -> scheduler.addTask(e));
 
         while(scheduler.tasksLeft()) {
-            scheduler.scheduleTasks(registeredClients);
+            scheduler.scheduleTasks(registeredClients, channel);
         }
     }
 

@@ -1,5 +1,5 @@
 class PrimeTask {
-    int numberToCheck;
+    Integer numberToCheck;
     boolean completed = false;
 
     PrimeTask(int numberToCheck) {
