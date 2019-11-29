@@ -1,6 +1,6 @@
 import java.io.*;
 
 public class ClientReturn implements Serializable {
-    Integer numberToCheck;
+    int numberToCheck;
     boolean isPrime;
 }

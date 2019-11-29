@@ -44,7 +44,7 @@ public class RabbitMQUtils {
 
         System.out.println("Binding queues...");
         channel.queueBind(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName());
-        channel.queueBind(Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName());
+        channel.queueBind(Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName());
         System.out.println("Binding of queues completed successfully");
     }
 }

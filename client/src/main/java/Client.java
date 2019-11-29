@@ -1,4 +1,5 @@
 import com.rabbitmq.client.*;
+import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import util.ByteConverter;
 import util.PrimeUtil;
@@ -63,7 +64,7 @@ public class Client {
     }
 
     private void listenForTasks() throws IOException {
-        channel.basicConsume(Queue.CONSUMER_PRODUCTION_QUEUE.getName(), true, name,
+        channel.basicConsume(getProductionQueueName(), true, name,
                 new DefaultConsumer(channel) {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
@@ -78,7 +79,7 @@ public class Client {
         ClientReturn clientReturn = new ClientReturn();
         clientReturn.isPrime = isPrime;
         clientReturn.numberToCheck = numberToCheck;
-        channel.basicPublish(Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, ByteConverter.objectToBytes(clientReturn));
+        channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
     }
 
     private String getProductionQueueName() {
