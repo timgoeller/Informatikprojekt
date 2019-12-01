@@ -61,6 +61,7 @@ class Host {
         while(scheduler.tasksLeft()) {
             scheduler.scheduleTasks(registeredClients, channel);
         }
+        System.out.println("Finished!");
     }
 
 }
