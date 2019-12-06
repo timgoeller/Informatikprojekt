@@ -63,6 +63,15 @@ class Scheduler {
 //                        closedTasks.add(task);
                     }
                 });
+
+        channel.basicConsume(RabbitMQUtils.Queue.CONSUMER_INFO_QUEUE.getName(), true, "myConsumerTag3",
+                new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        ClientDataReturn clientDataReturn = SerializationUtils.deserialize(body);
+                        
+                    }
+                });
     }
 
     boolean tasksLeft() {

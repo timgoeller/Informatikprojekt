@@ -1,3 +1,5 @@
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
 import util.RabbitMQUtils;
 
 import java.io.BufferedReader;
@@ -27,7 +29,6 @@ public class ClientInfo {
                         if(line.contains("(CPUs+GT+SA):")){
                             trimLine = line.trim().split(" ");
                             wattUsage = trimLine[7];
-                            sendWattUsageToMQ();
                             System.out.println(trimLine[7] + ", " + name);
                         }
                     }
@@ -43,8 +44,6 @@ public class ClientInfo {
         pr.destroy();
     }
 
-    public static void sendWattUsageToMQ(){
-    }
 }
 
 
