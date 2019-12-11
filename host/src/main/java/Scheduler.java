@@ -55,7 +55,7 @@ class Scheduler {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                         ClientReturn clientReturn = SerializationUtils.deserialize(body);
-//                        System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime);
+                        System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime + " Client Name:" + clientReturn.name);
 //                        PrimeTask task = currentlyExecutingTasks.stream().filter(currentTask -> currentTask.getNumber() == clientReturn.numberToCheck).findFirst().get();
 //                        task.completed = true;
 //                        task.isPrime = clientReturn.isPrime;

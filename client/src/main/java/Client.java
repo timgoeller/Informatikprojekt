@@ -79,6 +79,7 @@ public class Client {
         ClientReturn clientReturn = new ClientReturn();
         clientReturn.isPrime = isPrime;
         clientReturn.numberToCheck = numberToCheck;
+        clientReturn.name = name;
         channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
     }
 
