@@ -32,9 +32,11 @@ class Scheduler {
             listening = true;
         }
 
-        List<PrimeTask> finishedTasks = currentlyExecutingTasks.stream().filter(task -> task.completed).collect(Collectors.toList());
-        currentlyExecutingTasks.removeAll(finishedTasks);
-        closedTasks.addAll(finishedTasks);
+        synchronized (currentlyExecutingTasks) {
+            List<PrimeTask> finishedTasks = currentlyExecutingTasks.stream().filter(task -> task.completed).collect(Collectors.toList());
+            currentlyExecutingTasks.removeAll(finishedTasks);
+            closedTasks.addAll(finishedTasks);
+        }
 
         List<RegisteredClient> availableClients = clients.stream().filter(client -> client.tasksAssigned == 0).collect(Collectors.toList());
         for (RegisteredClient client : availableClients) {
@@ -55,7 +57,31 @@ class Scheduler {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                         ClientReturn clientReturn = SerializationUtils.deserialize(body);
-                        System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime + " Client Name:" + clientReturn.name);
+                        Optional<PrimeTask> primeTask = getCurrentlyExecutedTask(clientReturn.numberToCheck);
+
+                        if(primeTask.isPresent()) {
+                            PrimeTask returnedTask = primeTask.get();
+                            returnedTask.completed = true;
+                            System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime + " Client Name:" + clientReturn.name);
+                        }
+//                        List<PrimeTask> currentlyExecutingTasksLocal = currentlyExecutingTasks;
+//                        try {
+//                            primeTaskOptional = currentlyExecutingTasksLocal.stream().filter(currentTask -> currentTask.getNumber() == clientReturn.numberToCheck).findFirst();
+//                        }
+//                        catch(Exception e) {
+//
+//                        }
+//
+//                        if(primeTaskOptional != null) {
+//                            if(primeTaskOptional.isPresent()) {
+//                                PrimeTask returnedTask = primeTaskOptional.get();
+//                                returnedTask.isPrime = clientReturn.isPrime;
+//                                currentlyExecutingTasks.remove(returnedTask);
+//                                closedTasks.add(returnedTask);
+//                                System.out.println("Added to closed tasks!");
+//                            }
+//                        }
+
 //                        PrimeTask task = currentlyExecutingTasks.stream().filter(currentTask -> currentTask.getNumber() == clientReturn.numberToCheck).findFirst().get();
 //                        task.completed = true;
 //                        task.isPrime = clientReturn.isPrime;
@@ -72,6 +98,12 @@ class Scheduler {
                         
                     }
                 });
+    }
+
+    public Optional<PrimeTask> getCurrentlyExecutedTask(int number) {
+        synchronized (currentlyExecutingTasks) {
+            return currentlyExecutingTasks.stream().filter(currentTask -> currentTask.getNumber() == number).findFirst();
+        }
     }
 
     boolean tasksLeft() {

@@ -50,7 +50,9 @@ class Host {
                 new DefaultConsumer(channel) {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                        registeredClients.add(new RegisteredClient(new String(body), channel));
+                        synchronized (registeredClients) {
+                            registeredClients.add(new RegisteredClient(new String(body), channel));
+                        }
                     }
                 });
     }
@@ -59,7 +61,9 @@ class Host {
         numbersToCheck.forEach(e -> scheduler.addTask(e));
 
         while(scheduler.tasksLeft()) {
-            scheduler.scheduleTasks(registeredClients, channel);
+            synchronized (registeredClients) {
+                scheduler.scheduleTasks(registeredClients, channel);
+            }
         }
         System.out.println("Finished!");
     }
