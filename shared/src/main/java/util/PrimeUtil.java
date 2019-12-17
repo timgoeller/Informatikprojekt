@@ -21,7 +21,7 @@ public class PrimeUtil {
 
         List<Integer> numbers = new ArrayList<Integer>();
 
-        for (int i = 0; i <= max; i++) {
+        for (int i = 0; i < max; i++) {
             numbers.add(i);
         }
 

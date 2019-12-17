@@ -17,6 +17,6 @@ public class ClientDataReturn implements Serializable {
     String clientName;
 
     public ClientDataReturn(String clientName) {
-        clientName = clientName;
+        this.clientName = clientName;
     }
 }

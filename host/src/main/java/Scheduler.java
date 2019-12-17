@@ -67,16 +67,6 @@ class Scheduler {
 
                     }
                 });
-
-        channel.basicConsume(RabbitMQUtils.Queue.CONSUMER_INFO_QUEUE.getName(), true, "myConsumerTag3",
-                new DefaultConsumer(channel) {
-                    @Override
-                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                        ClientDataReturn clientDataReturn = SerializationUtils.deserialize(body);
-                        System.out.println("SIZE " + clientDataReturn.latestExecutionTimes.size());
-                        
-                    }
-                });
     }
 
     public Optional<PrimeTask> getCurrentlyExecutedTask(int number) {

@@ -1,10 +1,13 @@
 import com.rabbitmq.client.*;
+import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
+import util.RabbitMQUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import static util.RabbitMQUtils.*;
@@ -60,6 +63,8 @@ class Host {
     void startTaskExecution(List<Integer> numbersToCheck) throws IOException {
         numbersToCheck.forEach(e -> scheduler.addTask(e));
 
+        listenForClientInfo();
+
         while(scheduler.tasksLeft()) {
             synchronized (registeredClients) {
                 scheduler.scheduleTasks(registeredClients, channel);
@@ -68,4 +73,26 @@ class Host {
         System.out.println("Finished!");
     }
 
+    public void listenForClientInfo() throws IOException {
+        channel.basicConsume(RabbitMQUtils.Queue.CONSUMER_INFO_QUEUE.getName(), true, "myConsumerTag4",
+                new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        ClientDataReturn clientDataReturn = SerializationUtils.deserialize(body);
+
+                        Optional<RegisteredClient> registeredClientOptional;
+                        synchronized (registeredClients) {
+                            registeredClientOptional = registeredClients.stream().filter(client -> client.getName().equals(clientDataReturn.clientName)).findFirst();
+                        }
+
+                        if(registeredClientOptional.isPresent()) {
+                            RegisteredClient registeredClient = registeredClientOptional.get();
+                            synchronized (registeredClient.executionDurations) {
+                                registeredClient.executionDurations.addAll(clientDataReturn.latestExecutionTimes);
+                                System.out.println("Client: " + registeredClient.executionDurations.size() + " " + registeredClient.getName());
+                            }
+                        }
+                    }
+                });
+    }
 }

@@ -2,12 +2,17 @@ import com.rabbitmq.client.Channel;
 import util.RabbitMQUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static util.RabbitMQUtils.PRODUCER_EXCHANGE_NAME;
 
 public class RegisteredClient {
     private String name;
     public volatile int tasksAssigned = 0;
+
+    public final List<Long> executionDurations = Collections.synchronizedList(new ArrayList<>());
 
     public RegisteredClient(String name, Channel channel) throws IOException {
         this.name = name;
@@ -25,5 +30,9 @@ public class RegisteredClient {
 
     public String getProductionQueueName() {
         return RabbitMQUtils.Queue.CONSUMER_PRODUCTION_QUEUE.getName() + "_" + name;
+    }
+
+    public String getName() {
+        return name;
     }
 }
