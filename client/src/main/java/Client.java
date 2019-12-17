@@ -1,11 +1,15 @@
 import com.rabbitmq.client.*;
 import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
-import util.ByteConverter;
 import util.PrimeUtil;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
+import java.util.Timer;
 
 import static util.RabbitMQUtils.*;
 
@@ -75,7 +79,25 @@ public class Client {
     }
 
     private void executeTask(Integer numberToCheck) throws IOException {
+        //System.out.println("Executing Task: " + numberToCheck);
+        if(!dataTimerRunning) {
+            synchronized (dataTimerRunning) {
+                if (!dataTimerRunning) {
+                    dataTimerRunning = true;
+                    System.out.println("Starting data timers...");
+                    dataTimer.scheduleAtFixedRate(collectClientInfo, 10, 100);
+                    dataTimer.scheduleAtFixedRate(sendClientInfo, 10, 100);
+                    System.out.println("Started data timers");
+                }
+            }
+        }
+
+        long startTime = System.nanoTime();
         boolean isPrime = PrimeUtil.isPrimeNumber(numberToCheck);
+        long endTime = System.nanoTime();
+        synchronized (latestExecutionTimes) {
+            latestExecutionTimes.add(endTime - startTime);
+        }
         ClientReturn clientReturn = new ClientReturn();
         clientReturn.isPrime = isPrime;
         clientReturn.numberToCheck = numberToCheck;
@@ -83,7 +105,37 @@ public class Client {
         channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
     }
 
+
     private String getProductionQueueName() {
         return Queue.CONSUMER_PRODUCTION_QUEUE.getName() + "_" + name;
     }
+
+    public final List<Long> latestExecutionTimes = Collections.synchronizedList(new ArrayList<>());
+
+    Timer dataTimer = new Timer();
+    Boolean dataTimerRunning = false;
+
+    TimerTask collectClientInfo = new TimerTask() {
+        @Override
+        public void run() {
+        }
+    };
+
+    TimerTask sendClientInfo = new TimerTask() {
+        @Override
+        public void run(){
+            System.out.println("Sending data to host...");
+            ClientDataReturn clientDataReturn = new ClientDataReturn(name);
+            synchronized (latestExecutionTimes) {
+                clientDataReturn.latestExecutionTimes = new ArrayList<>(latestExecutionTimes);
+                latestExecutionTimes.clear();
+            }
+            try {
+                channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_INFO_QUEUE.getName(), null, SerializationUtils.serialize(clientDataReturn));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Sended data to host");
+        }
+    };
 }

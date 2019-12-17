@@ -12,7 +12,7 @@ import static util.RabbitMQUtils.*;
 class Host {
 
     private Channel channel;
-    private List<RegisteredClient> registeredClients = Collections.synchronizedList(new ArrayList<>());
+    private final List<RegisteredClient> registeredClients = Collections.synchronizedList(new ArrayList<>());
     private Scheduler scheduler;
 
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {

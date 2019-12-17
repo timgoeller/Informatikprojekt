@@ -15,9 +15,9 @@ import static util.RabbitMQUtils.CONSUMER_EXCHANGE_NAME;
 import static util.RabbitMQUtils.PRODUCER_EXCHANGE_NAME;
 
 class Scheduler {
-    private Queue<PrimeTask> openTasks = new LinkedList<>();
-    private List<PrimeTask> currentlyExecutingTasks = Collections.synchronizedList(new ArrayList<>());
-    private List<PrimeTask> closedTasks = Collections.synchronizedList(new ArrayList<>());
+    private final Queue<PrimeTask> openTasks = new LinkedList<>();
+    private final List<PrimeTask> currentlyExecutingTasks = Collections.synchronizedList(new ArrayList<>());
+    private final List<PrimeTask> closedTasks = Collections.synchronizedList(new ArrayList<>());
 
     boolean listening = false;
 
@@ -62,31 +62,9 @@ class Scheduler {
                         if(primeTask.isPresent()) {
                             PrimeTask returnedTask = primeTask.get();
                             returnedTask.completed = true;
-                            System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime + " Client Name:" + clientReturn.name);
+                           //System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime + " Client Name:" + clientReturn.name);
                         }
-//                        List<PrimeTask> currentlyExecutingTasksLocal = currentlyExecutingTasks;
-//                        try {
-//                            primeTaskOptional = currentlyExecutingTasksLocal.stream().filter(currentTask -> currentTask.getNumber() == clientReturn.numberToCheck).findFirst();
-//                        }
-//                        catch(Exception e) {
-//
-//                        }
-//
-//                        if(primeTaskOptional != null) {
-//                            if(primeTaskOptional.isPresent()) {
-//                                PrimeTask returnedTask = primeTaskOptional.get();
-//                                returnedTask.isPrime = clientReturn.isPrime;
-//                                currentlyExecutingTasks.remove(returnedTask);
-//                                closedTasks.add(returnedTask);
-//                                System.out.println("Added to closed tasks!");
-//                            }
-//                        }
 
-//                        PrimeTask task = currentlyExecutingTasks.stream().filter(currentTask -> currentTask.getNumber() == clientReturn.numberToCheck).findFirst().get();
-//                        task.completed = true;
-//                        task.isPrime = clientReturn.isPrime;
-//                        currentlyExecutingTasks.remove(task);
-//                        closedTasks.add(task);
                     }
                 });
 
@@ -95,6 +73,7 @@ class Scheduler {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                         ClientDataReturn clientDataReturn = SerializationUtils.deserialize(body);
+                        System.out.println("SIZE " + clientDataReturn.latestExecutionTimes.size());
                         
                     }
                 });

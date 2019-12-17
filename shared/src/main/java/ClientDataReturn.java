@@ -4,23 +4,19 @@ import util.RabbitMQUtils;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.List;
 
 import static util.RabbitMQUtils.CONSUMER_EXCHANGE_NAME;
 
 public class ClientDataReturn implements Serializable {
 
     private String wattUsage;
-    private Channel channel;
 
-    public ClientDataReturn(Channel channel, String wattUsage){
-        this.wattUsage = wattUsage;
-        this.channel = channel;
+    public List<Long> latestExecutionTimes;
+
+    String clientName;
+
+    public ClientDataReturn(String clientName) {
+        clientName = clientName;
     }
-
-    public void sendDataToMQ() throws IOException{
-
-        channel.basicPublish(CONSUMER_EXCHANGE_NAME, RabbitMQUtils.Queue.CONSUMER_INFO_QUEUE.getName(), null, SerializationUtils.serialize(this));
-
-    }
-
 }
