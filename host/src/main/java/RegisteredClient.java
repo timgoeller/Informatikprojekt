@@ -10,7 +10,7 @@ import static util.RabbitMQUtils.PRODUCER_EXCHANGE_NAME;
 
 public class RegisteredClient {
     private String name;
-    public volatile int tasksAssigned = 0;
+    public int tasksAssigned = 0;
 
     public final List<Long> executionDurations = Collections.synchronizedList(new ArrayList<>());
 

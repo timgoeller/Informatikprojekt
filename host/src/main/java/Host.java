@@ -17,8 +17,16 @@ class Host {
     private Channel channel;
     private final List<RegisteredClient> registeredClients = Collections.synchronizedList(new ArrayList<>());
     private Scheduler scheduler;
-    private
 
+
+    /**
+     *
+     * @param rabbitMQHost IP-String for the RabbitMQ-Server
+     * @param rabbitMQUser RabbitMQ-Username
+     * @param rabbitMQPass RabbitMQ-Password
+     * @param rabbitMQPort Port of the RabbitMQ-Server
+     * @throws IOException
+     */
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {
         ConnectionFactory factory = new ConnectionFactory();
         scheduler = new Scheduler();
@@ -30,6 +38,12 @@ class Host {
         initializeRabbitMQConnection(factory);
         listenForNewClients();
     }
+
+    /**
+     * Triggers creations of all defaults
+     * @param factory
+     * @throws IOException
+     */
 
     private void initializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
@@ -49,6 +63,10 @@ class Host {
         }
     }
 
+    /**
+     * Listen for client registrations in queue
+     * @throws IOException
+     */
     private void listenForNewClients() throws IOException {
         channel.basicConsume(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), true, "myConsumerTag",
                 new DefaultConsumer(channel) {
@@ -61,6 +79,11 @@ class Host {
                 });
     }
 
+    /**
+     * Start scheduleing of tasks until they are finished
+     * @param numbersToCheck
+     * @throws IOException
+     */
     void startTaskExecution(List<Integer> numbersToCheck) throws IOException {
         numbersToCheck.forEach(e -> scheduler.addTask(e));
 
