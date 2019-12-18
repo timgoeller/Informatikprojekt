@@ -17,7 +17,17 @@ public class Client {
 
     private Channel channel;
     private String name;
+    private ClientInfoCollector clientInfoCollector = new ClientInfoCollector();
 
+    /**
+     *
+     * @param rabbitMQHost IP-String for the RabbitMQ-Server
+     * @param rabbitMQUser RabbitMQ-Username
+     * @param rabbitMQPass RabbitMQ-Password
+     * @param rabbitMQPort Port of the RabbitMQ-Server
+     * @param clientName Name of this client. Has to be unique in the host-client connection
+     * @throws IOException
+     */
     Client(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort, @NotNull String clientName) throws IOException {
         name = clientName;
 
@@ -32,6 +42,11 @@ public class Client {
         notifyProducer();
     }
 
+    /**
+     * Triggers creations of all defaults
+     * @param factory
+     * @throws IOException
+     */
     private void initializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
             System.out.println("Creating connection...");
@@ -51,11 +66,20 @@ public class Client {
         }
     }
 
+    /**
+     * Notify producer that this client is now available
+     * @throws IOException
+     */
     private void notifyProducer() throws IOException {
         System.out.println("Notifying publisher of creation...");
         channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_REGISTRATION_QUEUE.getName(), null, name.getBytes());
     }
 
+    /**
+     * Create the queue for sending data to this client
+     * @param channel
+     * @throws IOException
+     */
     private void createClientQueue(@NotNull Channel channel) throws IOException{
         System.out.println("Declaring custom queue for data exchange...");
         //queueDeclare(name, durable, exclusive, autoDelete, arguments)
@@ -67,6 +91,10 @@ public class Client {
         System.out.println("Binding of custom queue completed successfully");
     }
 
+    /**
+     * Listen for incoming data packets
+     * @throws IOException
+     */
     private void listenForTasks() throws IOException {
         channel.basicConsume(getProductionQueueName(), true, name,
                 new DefaultConsumer(channel) {
@@ -78,18 +106,14 @@ public class Client {
                 });
     }
 
+    /**
+     *
+     * @param numberToCheck
+     * @throws IOException
+     */
     private void executeTask(Integer numberToCheck) throws IOException {
-        //System.out.println("Executing Task: " + numberToCheck);
         if(!dataTimerRunning) {
-            synchronized (dataTimerRunning) {
-                if (!dataTimerRunning) {
-                    dataTimerRunning = true;
-                    System.out.println("Starting data timers...");
-                    dataTimer.scheduleAtFixedRate(collectClientInfo, 10, 100);
-                    dataTimer.scheduleAtFixedRate(sendClientInfo, 10, 100);
-                    System.out.println("Started data timers");
-                }
-            }
+            triggerDataCollection();
         }
 
         long startTime = System.nanoTime();
@@ -103,6 +127,22 @@ public class Client {
         clientReturn.numberToCheck = numberToCheck;
         clientReturn.name = name;
         channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
+    }
+
+    /**
+     * Start collecting client data in a fixed interval
+     */
+    private void triggerDataCollection() {
+        synchronized (dataTimerRunning) {
+            if (!dataTimerRunning) {
+                dataTimerRunning = true;
+                System.out.println("Starting data timers...");
+                dataTimer.scheduleAtFixedRate(collectClientInfo, 10, 100);
+                dataTimer.scheduleAtFixedRate(sendClientInfo, 10, 100);
+                System.out.println("Started data timers");
+            }
+        }
+
     }
 
 

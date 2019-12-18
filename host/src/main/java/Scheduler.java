@@ -25,8 +25,13 @@ class Scheduler {
         openTasks.add(new PrimeTask(number));
     }
 
+    /**
+     * Runs the scheduler once
+     * @param clients
+     * @param channel
+     * @throws IOException
+     */
     void scheduleTasks(List<RegisteredClient> clients, Channel channel) throws IOException {
-
         if(!listening) {
             listenForReturns(channel);
             listening = true;
@@ -46,6 +51,13 @@ class Scheduler {
         }
     }
 
+    /**
+     * Send task to client for execution
+     * @param client
+     * @param task
+     * @param channel
+     * @throws IOException
+     */
     private void assignAndStartTask(RegisteredClient client, PrimeTask task, Channel channel) throws IOException {
         currentlyExecutingTasks.add(task);
         channel.basicPublish(PRODUCER_EXCHANGE_NAME, client.getProductionQueueName(), null, task.numberToCheck.toString().getBytes());
@@ -62,9 +74,7 @@ class Scheduler {
                         if(primeTask.isPresent()) {
                             PrimeTask returnedTask = primeTask.get();
                             returnedTask.completed = true;
-                           //System.out.println("Client Return: " + clientReturn.numberToCheck + " " + clientReturn.isPrime + " Client Name:" + clientReturn.name);
                         }
-
                     }
                 });
     }

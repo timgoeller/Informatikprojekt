@@ -17,6 +17,7 @@ class Host {
     private Channel channel;
     private final List<RegisteredClient> registeredClients = Collections.synchronizedList(new ArrayList<>());
     private Scheduler scheduler;
+    private
 
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {
         ConnectionFactory factory = new ConnectionFactory();
