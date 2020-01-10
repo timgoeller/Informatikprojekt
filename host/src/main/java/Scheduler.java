@@ -9,6 +9,7 @@ import util.RabbitMQUtils;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static util.RabbitMQUtils.CONSUMER_EXCHANGE_NAME;
@@ -59,6 +60,8 @@ class Scheduler {
      * @throws IOException
      */
     private void assignAndStartTask(RegisteredClient client, PrimeTask task, Channel channel) throws IOException {
+        task.assignedClient = client;
+        client.tasksAssigned++;
         currentlyExecutingTasks.add(task);
         channel.basicPublish(PRODUCER_EXCHANGE_NAME, client.getProductionQueueName(), null, task.numberToCheck.toString().getBytes());
     }
@@ -74,6 +77,7 @@ class Scheduler {
                         if(primeTask.isPresent()) {
                             PrimeTask returnedTask = primeTask.get();
                             returnedTask.completed = true;
+                            returnedTask.assignedClient.tasksAssigned--;
                         }
                     }
                 });
@@ -87,5 +91,9 @@ class Scheduler {
 
     boolean tasksLeft() {
         return !openTasks.isEmpty() || !currentlyExecutingTasks.isEmpty();
+    }
+
+    void test(Function<String, String> test) {
+
     }
 }
