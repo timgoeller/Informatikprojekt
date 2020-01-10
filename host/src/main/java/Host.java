@@ -89,6 +89,14 @@ class Host {
 
         listenForClientInfo();
 
+        System.out.println("Press Enter key to continue...");
+        try
+        {
+            System.in.read();
+        }
+        catch(Exception e)
+        {}
+
         while(scheduler.tasksLeft()) {
             synchronized (registeredClients) {
                 scheduler.scheduleTasks(registeredClients, channel);
