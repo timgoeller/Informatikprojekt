@@ -137,8 +137,8 @@ public class Client {
             if (!dataTimerRunning) {
                 dataTimerRunning = true;
                 System.out.println("Starting data timers...");
-                dataTimer.scheduleAtFixedRate(collectClientInfo, 10, 100);
-                dataTimer.scheduleAtFixedRate(sendClientInfo, 10, 100);
+                dataTimer.scheduleAtFixedRate(collectClientInfo, 100, 5000);
+                dataTimer.scheduleAtFixedRate(sendClientInfo, 100, 1000);
                 System.out.println("Started data timers");
             }
         }
@@ -158,6 +158,7 @@ public class Client {
     TimerTask collectClientInfo = new TimerTask() {
         @Override
         public void run() {
+
         }
     };
 
