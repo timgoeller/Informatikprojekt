@@ -8,7 +8,7 @@ public class Program {
     public static void main(String[] argv) throws IOException {
         Config config = Config.readConfigFromCLIArgs(argv);
         Host host = new Host(config.hostIP, config.username, config.password, config.port);
-        host.startTaskExecution(PrimeUtil.generateNumbers(100000));
+        host.startTaskExecution(PrimeUtil.generateNumbers(500000));
     }
 
 }

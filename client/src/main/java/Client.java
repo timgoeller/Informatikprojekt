@@ -8,16 +8,55 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.Timer;
 
 import static util.RabbitMQUtils.*;
 
-public class Client {
+public class Client{
 
     private Channel channel;
     private String name;
     private ClientInfoCollector clientInfoCollector = new ClientInfoCollector();
+
+
+    public class Task extends Thread{
+        public void run(Integer numberToCheck) throws IOException, InterruptedException {
+            boolean b = true;
+            if(!dataTimerRunning) {
+                triggerDataCollection();
+            }
+
+            long startTime = System.nanoTime();
+            boolean isPrime = PrimeUtil.isPrimeNumber(numberToCheck);
+            long endTime = System.nanoTime();
+            synchronized (latestExecutionTimes) {
+                latestExecutionTimes.add(endTime - startTime);
+            }
+            ClientReturn clientReturn = new ClientReturn();
+            clientReturn.isPrime = isPrime;
+            clientReturn.numberToCheck = numberToCheck;
+            clientReturn.name = name;
+//            System.out.println(numberToCheck + " ist Prime: " + isPrime);
+//            System.out.println(this.getId());
+
+            channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
+
+//            gute idee gewesen aber schafft garnicht erst mehr als 10k threads zustarten
+//            while(b){
+//                if(channel.queueDeclarePassive(Queue.CONSUMER_DATA_RETURN_QUEUE.getName()).getMessageCount() <= 10000){
+//                    channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
+//                    b = false;
+//                }
+//                else{
+//                    System.out.println("queue full mf");
+//                }
+//            }
+//            channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
+        }
+    }
 
     /**
      *
@@ -28,7 +67,7 @@ public class Client {
      * @param clientName Name of this client. Has to be unique in the host-client connection
      * @throws IOException
      */
-    Client(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort, @NotNull String clientName) throws IOException {
+    Client(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort, @NotNull String clientName) throws IOException, InterruptedException {
         name = clientName;
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -38,8 +77,11 @@ public class Client {
         factory.setPassword(rabbitMQPass);
 
         initializeRabbitMQConnection(factory);
+//        channel.basicQos(20);
         listenForTasks();
         notifyProducer();
+
+        clientInfoCollector.clientWatt();
     }
 
     /**
@@ -50,6 +92,7 @@ public class Client {
     private void initializeRabbitMQConnection(@NotNull ConnectionFactory factory) throws IOException {
         try {
             System.out.println("Creating connection...");
+
             Connection connection = factory.newConnection();
             System.out.println("Connection created successfully");
 
@@ -96,14 +139,48 @@ public class Client {
      * @throws IOException
      */
     private void listenForTasks() throws IOException {
-        channel.basicConsume(getProductionQueueName(), true, name,
-                new DefaultConsumer(channel) {
-                    @Override
-                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                        Integer numberToCheck = Integer.valueOf(new String(body));
-                        executeTask(numberToCheck);
-                    }
-                });
+
+//        for (int i = 0; i < 10; i++) {
+
+            channel.basicQos(1); // accept only one unack-ed message at a time (see below)
+
+            DeliverCallback deliverCallback = (name, delivery) -> {
+                //Integer numberToCheck = Integer.valueOf(new String(delivery.getBody()));
+                String numberToCheck = new String(delivery.getBody());
+//                System.out.println(" [x] Received '" + numberToCheck + "'");
+                try {
+                    doWork(numberToCheck);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+//                    System.out.println(" [x] Done");
+                    channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+                }
+            };
+            boolean autoAck = false;
+            channel.basicConsume(getProductionQueueName(), autoAck, deliverCallback, consumerTag -> { });
+//        }
+
+//        channel.basicQos(100);
+//        channel.basicConsume(getProductionQueueName(), true, name,
+//                new DefaultConsumer(channel) {
+//                    @Override
+//                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+//                        String numberToCheck = new String(body);
+//                        doWork(numberToCheck);
+//                    }
+//                });
+//
+
+            //new Task().run();
+    }
+
+    private void doWork(String number) throws IOException, InterruptedException {
+        String[] numbers = number.split(",", 0);
+        for(String n : numbers){
+//            System.out.println(n);
+            new Task().run(Integer.valueOf(n));
+        }
     }
 
     /**
@@ -138,6 +215,7 @@ public class Client {
                 dataTimerRunning = true;
                 System.out.println("Starting data timers...");
                 dataTimer.scheduleAtFixedRate(collectClientInfo, 100, 5000);
+
                 dataTimer.scheduleAtFixedRate(sendClientInfo, 100, 1000);
                 System.out.println("Started data timers");
             }
@@ -165,18 +243,21 @@ public class Client {
     TimerTask sendClientInfo = new TimerTask() {
         @Override
         public void run(){
-            System.out.println("Sending data to host...");
+//            System.out.println("Sending data to host...");
             ClientDataReturn clientDataReturn = new ClientDataReturn(name);
+            clientDataReturn.wattUsage = ClientInfoCollector.getWattUsage();
             synchronized (latestExecutionTimes) {
                 clientDataReturn.latestExecutionTimes = new ArrayList<>(latestExecutionTimes);
                 latestExecutionTimes.clear();
             }
             try {
-                channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_INFO_QUEUE.getName(), null, SerializationUtils.serialize(clientDataReturn));
+                if (!(Double.isNaN(clientDataReturn.wattUsage))) {
+                    channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_INFO_QUEUE.getName(), null, SerializationUtils.serialize(clientDataReturn));
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("Sended data to host");
+//            System.out.println("Sended data to host");
         }
     };
 }

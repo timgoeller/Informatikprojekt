@@ -42,9 +42,9 @@ public class RabbitMQUtils {
     public static void CreateDefaultQueues(Channel channel) throws IOException {
         System.out.println("Declaring queues...");
         //queueDeclare(name, durable, exclusive, autoDelete, arguments)
-        channel.queueDeclare(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), false, false, true, null);
-        channel.queueDeclare(Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), false, false, true, null);
-        channel.queueDeclare(Queue.CONSUMER_INFO_QUEUE.getName(), false, false, true, null);
+        channel.queueDeclare(Queue.CONSUMER_REGISTRATION_QUEUE.getName(), false, false, false, null);
+        channel.queueDeclare(Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), false, false, false, null);
+        channel.queueDeclare(Queue.CONSUMER_INFO_QUEUE.getName(), false, false, false, null);
         System.out.println("Queues declared successfully");
 
         System.out.println("Binding queues...");

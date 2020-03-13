@@ -1,4 +1,5 @@
 import com.rabbitmq.client.Channel;
+import com.sun.security.ntlm.Client;
 import util.RabbitMQUtils;
 
 import java.io.IOException;
@@ -6,11 +7,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+
+
 import static util.RabbitMQUtils.PRODUCER_EXCHANGE_NAME;
 
-public class RegisteredClient {
+public class RegisteredClient{
     private String name;
     public int tasksAssigned = 0;
+    private double wattUsage;
 
     public final List<Long> executionDurations = Collections.synchronizedList(new ArrayList<>());
 
@@ -34,5 +38,13 @@ public class RegisteredClient {
 
     public String getName() {
         return name;
+    }
+
+    public void setWattUsage(double wattUsage){
+        this.wattUsage = wattUsage;
+    }
+
+    public double getWattUsage(){
+        return wattUsage;
     }
 }

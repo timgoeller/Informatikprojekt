@@ -10,7 +10,7 @@ import static util.RabbitMQUtils.CONSUMER_EXCHANGE_NAME;
 
 public class ClientDataReturn implements Serializable {
 
-    private String wattUsage;
+    public double wattUsage;
 
     public List<Long> latestExecutionTimes;
 

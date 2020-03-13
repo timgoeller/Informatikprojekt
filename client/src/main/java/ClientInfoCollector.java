@@ -8,9 +8,13 @@ import java.io.InputStreamReader;
 
 public class ClientInfoCollector {
 
-    static String wattUsage;
+    private static double wattUsage;
 
-    public static void clientWatt(String name) throws IOException, InterruptedException {
+    public static double getWattUsage() {
+        return wattUsage;
+    }
+
+    public void clientWatt() throws IOException, InterruptedException {
         if(!System.getProperty("os.name").equals("Windows 10")) {
             Runtime rt = Runtime.getRuntime();
 
@@ -28,8 +32,8 @@ public class ClientInfoCollector {
                             //Intel energy model derived package power (CPUs+GT+SA):
                             if(line.contains("(CPUs+GT+SA):")){
                                 trimLine = line.trim().split(" ");
-                                wattUsage = trimLine[7];
-                                System.out.println(trimLine[7] + ", " + name);
+                                wattUsage = Double.valueOf(trimLine[7].substring(0,trimLine[7].length()-1));
+                                System.out.println(wattUsage);
                             }
                         }
                     }

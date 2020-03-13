@@ -19,6 +19,7 @@ class Host {
     private Scheduler scheduler;
 
 
+
     /**
      *
      * @param rabbitMQHost IP-String for the RabbitMQ-Server
@@ -28,6 +29,7 @@ class Host {
      * @throws IOException
      */
     Host(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort) throws IOException {
+        System.out.println(Runtime.getRuntime().availableProcessors());
         ConnectionFactory factory = new ConnectionFactory();
         scheduler = new Scheduler();
         factory.setHost(rabbitMQHost);
@@ -84,10 +86,13 @@ class Host {
      * @param numbersToCheck
      * @throws IOException
      */
-    void startTaskExecution(List<Integer> numbersToCheck) throws IOException {
+    void startTaskExecution(List<String> numbersToCheck) throws IOException {
+
+
         numbersToCheck.forEach(e -> scheduler.addTask(e));
 
         listenForClientInfo();
+        getClientInfo();
 
         System.out.println("Press Enter key to continue...");
         try
@@ -96,13 +101,17 @@ class Host {
         }
         catch(Exception e)
         {}
-
+        long startTime = System.currentTimeMillis();
         while(scheduler.tasksLeft()) {
             synchronized (registeredClients) {
                 scheduler.scheduleTasks(registeredClients, channel);
+//                scheduler.scheduleTasksWattUsage(registeredClients, channel);
             }
         }
         System.out.println("Finished!");
+        System.out.println(registeredClients.get(0).executionDurations.size());
+        long endTime = System.currentTimeMillis();
+        System.out.println(endTime-startTime);
     }
 
     public void listenForClientInfo() throws IOException {
@@ -116,15 +125,37 @@ class Host {
                         synchronized (registeredClients) {
                             registeredClientOptional = registeredClients.stream().filter(client -> client.getName().equals(clientDataReturn.clientName)).findFirst();
                         }
-
                         if(registeredClientOptional.isPresent()) {
                             RegisteredClient registeredClient = registeredClientOptional.get();
                             synchronized (registeredClient.executionDurations) {
                                 registeredClient.executionDurations.addAll(clientDataReturn.latestExecutionTimes);
-                                System.out.println("Client: " + registeredClient.executionDurations.size() + " " + registeredClient.getName());
+                                if(scheduler.tasksLeft()) {
+                                    System.out.println("Client: " + registeredClient.executionDurations.size() + " " + registeredClient.getName());
+                                }
                             }
                         }
                     }
                 });
+    }
+
+
+
+    public void getClientInfo()throws IOException{
+        channel.basicConsume(RabbitMQUtils.Queue.CONSUMER_INFO_QUEUE.getName(), true, "myConsumerTag6",
+                new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException{
+                        ClientDataReturn clientDataReturn = SerializationUtils.deserialize(body);
+
+                        for(RegisteredClient rc : registeredClients){
+                            if(clientDataReturn.clientName.equals(rc.getName())){
+                                rc.setWattUsage(clientDataReturn.wattUsage);
+                                System.out.println(rc.getName() + ", "+ rc.getWattUsage() );
+                            }
+                        }
+
+                    }
+                });
+
     }
 }
