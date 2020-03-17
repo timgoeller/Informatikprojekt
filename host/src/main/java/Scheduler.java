@@ -73,8 +73,9 @@ class Scheduler {
                 break;
             }
             assignAndStartTask(sortedClient, openTasks.poll(), channel);
-
         }
+
+
     }
 
     /**

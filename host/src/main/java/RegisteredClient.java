@@ -14,7 +14,7 @@ import static util.RabbitMQUtils.PRODUCER_EXCHANGE_NAME;
 public class RegisteredClient{
     private String name;
     public int tasksAssigned = 0;
-    private double wattUsage;
+    private double wattUsage = Double.POSITIVE_INFINITY;
 
     public final List<Long> executionDurations = Collections.synchronizedList(new ArrayList<>());
 
