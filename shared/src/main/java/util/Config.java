@@ -4,27 +4,28 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class Config {
 
-    @Parameter(names = { "-rh"}, description = "RabbitMQ host", required = true)
+    @Parameter(names = {"-rh"}, description = "RabbitMQ host", required = true)
     public String hostIP;
 
-    @Parameter(names = { "-u"}, description = "RabbitMQ username", required = true)
+    @Parameter(names = {"-u"}, description = "RabbitMQ username", required = true)
     public String username;
 
-    @Parameter(names = { "-pa"}, description = "RabbitMQ password", required = true)
+    @Parameter(names = {"-pa"}, description = "RabbitMQ password", required = true)
     public String password;
 
-    @Parameter(names = { "-p"}, description = "RabbitMQ port")
+    @Parameter(names = {"-p"}, description = "RabbitMQ port")
     public Integer port = 5672;
 
-    private Config() {}
+    private Config() {
+    }
 
     /**
      * Creates a config object using the CLI arguments
+     *
      * @param argv CLI arguments
      * @return util.Config instance instantiated with CLI arguments
      */
@@ -40,6 +41,13 @@ public class Config {
         return config;
     }
 
+    /**
+     * Same as readConfigFromCLIArgs but allows for additional configuaration
+     *
+     * @param argv
+     * @param additonalConfig List of config objects that should be added to the config reader
+     * @return
+     */
     public static Config readConfigFromCLIArgsWithAdditionalConfig(@NotNull String[] argv, @NotNull List<?> additonalConfig) {
 
         Config config = new Config();

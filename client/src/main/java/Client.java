@@ -1,70 +1,52 @@
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DeliverCallback;
 import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import util.PrimeUtil;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.TimerTask;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
-import java.util.Timer;
 
+import static util.RabbitMQUtils.Queue;
 import static util.RabbitMQUtils.*;
 
-public class Client{
+public class Client {
 
+    public final List<Long> latestExecutionTimes = Collections.synchronizedList(new ArrayList<>());
+    Timer dataTimer = new Timer();
+    Boolean dataTimerRunning = false;
+
+    private ClientInfoCollector clientInfoCollector = new ClientInfoCollector();
     private Channel channel;
     private String name;
-    private ClientInfoCollector clientInfoCollector = new ClientInfoCollector();
-
-
-    public class Task extends Thread{
-        public void run(Integer numberToCheck) throws IOException, InterruptedException {
-            boolean b = true;
-            if(!dataTimerRunning) {
-                triggerDataCollection();
-            }
-
-            long startTime = System.nanoTime();
-            boolean isPrime = PrimeUtil.isPrimeNumber(numberToCheck);
-            long endTime = System.nanoTime();
+    TimerTask sendClientInfo = new TimerTask() {
+        @Override
+        public void run() {
+            ClientDataReturn clientDataReturn = new ClientDataReturn(name);
+            clientDataReturn.wattUsage = ClientInfoCollector.getWattUsage();
             synchronized (latestExecutionTimes) {
-                latestExecutionTimes.add(endTime - startTime);
+                clientDataReturn.latestExecutionTimes = new ArrayList<>(latestExecutionTimes);
+                latestExecutionTimes.clear();
             }
-            ClientReturn clientReturn = new ClientReturn();
-            clientReturn.isPrime = isPrime;
-            clientReturn.numberToCheck = numberToCheck;
-            clientReturn.name = name;
-//            System.out.println(numberToCheck + " ist Prime: " + isPrime);
-//            System.out.println(this.getId());
-
-            channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
-
-//            gute idee gewesen aber schafft garnicht erst mehr als 10k threads zustarten
-//            while(b){
-//                if(channel.queueDeclarePassive(Queue.CONSUMER_DATA_RETURN_QUEUE.getName()).getMessageCount() <= 10000){
-//                    channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
-//                    b = false;
-//                }
-//                else{
-//                    System.out.println("queue full mf");
-//                }
-//            }
-//            channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
+            try {
+                if (!(Double.isNaN(clientDataReturn.wattUsage))) {
+                    channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_INFO_QUEUE.getName(), null, SerializationUtils.serialize(clientDataReturn));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-    }
+    };
 
     /**
-     *
      * @param rabbitMQHost IP-String for the RabbitMQ-Server
      * @param rabbitMQUser RabbitMQ-Username
      * @param rabbitMQPass RabbitMQ-Password
      * @param rabbitMQPort Port of the RabbitMQ-Server
-     * @param clientName Name of this client. Has to be unique in the host-client connection
+     * @param clientName   Name of this client. Has to be unique in the host-client connection
      * @throws IOException
      */
     Client(@NotNull String rabbitMQHost, @NotNull String rabbitMQUser, @NotNull String rabbitMQPass, @NotNull Integer rabbitMQPort, @NotNull String clientName) throws IOException, InterruptedException {
@@ -77,7 +59,6 @@ public class Client{
         factory.setPassword(rabbitMQPass);
 
         initializeRabbitMQConnection(factory);
-//        channel.basicQos(20);
         listenForTasks();
         notifyProducer();
 
@@ -86,6 +67,7 @@ public class Client{
 
     /**
      * Triggers creations of all defaults
+     *
      * @param factory
      * @throws IOException
      */
@@ -103,14 +85,14 @@ public class Client{
             CreateDefaultExchanges(channel);
             CreateDefaultQueues(channel);
             createClientQueue(channel);
-        }
-        catch (TimeoutException e) {
+        } catch (TimeoutException e) {
             System.out.println("Timeout while trying to connect to the RabbitMQ server");
         }
     }
 
     /**
      * Notify producer that this client is now available
+     *
      * @throws IOException
      */
     private void notifyProducer() throws IOException {
@@ -120,10 +102,11 @@ public class Client{
 
     /**
      * Create the queue for sending data to this client
+     *
      * @param channel
      * @throws IOException
      */
-    private void createClientQueue(@NotNull Channel channel) throws IOException{
+    private void createClientQueue(@NotNull Channel channel) throws IOException {
         System.out.println("Declaring custom queue for data exchange...");
         //queueDeclare(name, durable, exclusive, autoDelete, arguments)
         channel.queueDeclare(getProductionQueueName(), false, false, true, null);
@@ -136,60 +119,41 @@ public class Client{
 
     /**
      * Listen for incoming data packets
+     *
      * @throws IOException
      */
     private void listenForTasks() throws IOException {
 
-//        for (int i = 0; i < 10; i++) {
+        channel.basicQos(1); // accept only one unack-ed message at a time (see below)
 
-            channel.basicQos(1); // accept only one unack-ed message at a time (see below)
-
-            DeliverCallback deliverCallback = (name, delivery) -> {
-                //Integer numberToCheck = Integer.valueOf(new String(delivery.getBody()));
-                String numberToCheck = new String(delivery.getBody());
-//                System.out.println(" [x] Received '" + numberToCheck + "'");
-                try {
-                    doWork(numberToCheck);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } finally {
-//                    System.out.println(" [x] Done");
-                    channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-                }
-            };
-            boolean autoAck = false;
-            channel.basicConsume(getProductionQueueName(), autoAck, deliverCallback, consumerTag -> { });
-//        }
-
-//        channel.basicQos(100);
-//        channel.basicConsume(getProductionQueueName(), true, name,
-//                new DefaultConsumer(channel) {
-//                    @Override
-//                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-//                        String numberToCheck = new String(body);
-//                        doWork(numberToCheck);
-//                    }
-//                });
-//
-
-            //new Task().run();
+        DeliverCallback deliverCallback = (name, delivery) -> {
+            String numberToCheck = new String(delivery.getBody());
+            try {
+                doWork(numberToCheck);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+            }
+        };
+        boolean autoAck = false;
+        channel.basicConsume(getProductionQueueName(), autoAck, deliverCallback, consumerTag -> {
+        });
     }
 
     private void doWork(String number) throws IOException, InterruptedException {
         String[] numbers = number.split(",", 0);
-        for(String n : numbers){
-//            System.out.println(n);
+        for (String n : numbers) {
             new Task().run(Integer.valueOf(n));
         }
     }
 
     /**
-     *
      * @param numberToCheck
      * @throws IOException
      */
     private void executeTask(Integer numberToCheck) throws IOException {
-        if(!dataTimerRunning) {
+        if (!dataTimerRunning) {
             triggerDataCollection();
         }
 
@@ -214,8 +178,6 @@ public class Client{
             if (!dataTimerRunning) {
                 dataTimerRunning = true;
                 System.out.println("Starting data timers...");
-                dataTimer.scheduleAtFixedRate(collectClientInfo, 100, 5000);
-
                 dataTimer.scheduleAtFixedRate(sendClientInfo, 100, 1000);
                 System.out.println("Started data timers");
             }
@@ -223,41 +185,28 @@ public class Client{
 
     }
 
-
     private String getProductionQueueName() {
         return Queue.CONSUMER_PRODUCTION_QUEUE.getName() + "_" + name;
     }
 
-    public final List<Long> latestExecutionTimes = Collections.synchronizedList(new ArrayList<>());
+    public class Task extends Thread {
+        public void run(Integer numberToCheck) throws IOException, InterruptedException {
+            boolean b = true;
+            if (!dataTimerRunning) {
+                triggerDataCollection();
+            }
 
-    Timer dataTimer = new Timer();
-    Boolean dataTimerRunning = false;
-
-    TimerTask collectClientInfo = new TimerTask() {
-        @Override
-        public void run() {
-
-        }
-    };
-
-    TimerTask sendClientInfo = new TimerTask() {
-        @Override
-        public void run(){
-//            System.out.println("Sending data to host...");
-            ClientDataReturn clientDataReturn = new ClientDataReturn(name);
-            clientDataReturn.wattUsage = ClientInfoCollector.getWattUsage();
+            long startTime = System.nanoTime();
+            boolean isPrime = PrimeUtil.isPrimeNumber(numberToCheck);
+            long endTime = System.nanoTime();
             synchronized (latestExecutionTimes) {
-                clientDataReturn.latestExecutionTimes = new ArrayList<>(latestExecutionTimes);
-                latestExecutionTimes.clear();
+                latestExecutionTimes.add(endTime - startTime);
             }
-            try {
-                if (!(Double.isNaN(clientDataReturn.wattUsage))) {
-                    channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_INFO_QUEUE.getName(), null, SerializationUtils.serialize(clientDataReturn));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-//            System.out.println("Sended data to host");
+            ClientReturn clientReturn = new ClientReturn();
+            clientReturn.isPrime = isPrime;
+            clientReturn.numberToCheck = numberToCheck;
+            clientReturn.name = name;
+            channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
         }
-    };
+    }
 }

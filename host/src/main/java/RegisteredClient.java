@@ -1,5 +1,4 @@
 import com.rabbitmq.client.Channel;
-import com.sun.security.ntlm.Client;
 import util.RabbitMQUtils;
 
 import java.io.IOException;
@@ -7,16 +6,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-
-
 import static util.RabbitMQUtils.PRODUCER_EXCHANGE_NAME;
 
-public class RegisteredClient{
-    private String name;
-    public int tasksAssigned = 0;
-    private double wattUsage = Double.POSITIVE_INFINITY;
-
+public class RegisteredClient {
     public final List<Long> executionDurations = Collections.synchronizedList(new ArrayList<>());
+    public int tasksAssigned = 0;
+    private String name;
+    private double wattUsage = Double.POSITIVE_INFINITY;
 
     public RegisteredClient(String name, Channel channel) throws IOException {
         this.name = name;
@@ -29,9 +25,13 @@ public class RegisteredClient{
         System.out.println("Binding custom queue for data exchange...");
         channel.queueBind(getProductionQueueName(), PRODUCER_EXCHANGE_NAME, getProductionQueueName());
         System.out.println("Binding of custom queue completed successfully");
-
     }
 
+    /**
+     * Constructs the name of the queue this client will write to
+     *
+     * @return Queue name
+     */
     public String getProductionQueueName() {
         return RabbitMQUtils.Queue.CONSUMER_PRODUCTION_QUEUE.getName() + "_" + name;
     }
@@ -40,11 +40,11 @@ public class RegisteredClient{
         return name;
     }
 
-    public void setWattUsage(double wattUsage){
-        this.wattUsage = wattUsage;
+    public double getWattUsage() {
+        return wattUsage;
     }
 
-    public double getWattUsage(){
-        return wattUsage;
+    public void setWattUsage(double wattUsage) {
+        this.wattUsage = wattUsage;
     }
 }
