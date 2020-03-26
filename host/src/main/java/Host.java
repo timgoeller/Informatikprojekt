@@ -86,8 +86,8 @@ class Host {
      * @param numberRowsToCheck Numbers to initialize the scheduler with
      * @throws IOException
      */
-    void startTaskExecution(@NotNull List<String> numberRowsToCheck) throws IOException {
-        scheduler = new Scheduler(Scheduler.ScheduleingStrategy.WattScheduleing);
+    void startTaskExecution(@NotNull List<Integer> numberRowsToCheck) throws IOException {
+        scheduler = new Scheduler(Scheduler.ScheduleingStrategy.PerformanceScheduleing);
         numberRowsToCheck.forEach(e -> scheduler.addTask(e));
 
         startListeningForClientInfo();

@@ -1,7 +1,4 @@
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.DeliverCallback;
+import com.rabbitmq.client.*;
 import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import util.PrimeUtil;
@@ -123,51 +120,18 @@ public class Client {
      * @throws IOException
      */
     private void listenForTasks() throws IOException {
-
-        channel.basicQos(1); // accept only one unack-ed message at a time (see below)
-
-        DeliverCallback deliverCallback = (name, delivery) -> {
-            String numberToCheck = new String(delivery.getBody());
-            try {
-                doWork(numberToCheck);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } finally {
-                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-            }
-        };
-        boolean autoAck = false;
-        channel.basicConsume(getProductionQueueName(), autoAck, deliverCallback, consumerTag -> {
-        });
-    }
-
-    private void doWork(String number) throws IOException, InterruptedException {
-        String[] numbers = number.split(",", 0);
-        for (String n : numbers) {
-            new Task().run(Integer.valueOf(n));
-        }
-    }
-
-    /**
-     * @param numberToCheck
-     * @throws IOException
-     */
-    private void executeTask(Integer numberToCheck) throws IOException {
-        if (!dataTimerRunning) {
-            triggerDataCollection();
-        }
-
-        long startTime = System.nanoTime();
-        boolean isPrime = PrimeUtil.isPrimeNumber(numberToCheck);
-        long endTime = System.nanoTime();
-        synchronized (latestExecutionTimes) {
-            latestExecutionTimes.add(endTime - startTime);
-        }
-        ClientReturn clientReturn = new ClientReturn();
-        clientReturn.isPrime = isPrime;
-        clientReturn.numberToCheck = numberToCheck;
-        clientReturn.name = name;
-        channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
+        channel.basicConsume(getProductionQueueName(), true, name,
+                new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        Integer numberToCheck = Integer.valueOf(new String(body));
+                        try {
+                            new Task().run(numberToCheck);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
     }
 
     /**

@@ -22,7 +22,7 @@ class Scheduler {
         this.strategy = strategy;
     }
 
-    void addTask(String numberRow) {
+    void addTask(Integer numberRow) {
         openTasks.add(new PrimeTask(numberRow));
     }
 
@@ -34,6 +34,17 @@ class Scheduler {
      * @throws IOException
      */
     void scheduleTasks(List<RegisteredClient> clients, Channel channel) throws IOException {
+        if (!listening) {
+            listenForReturns(channel);
+            listening = true;
+        }
+        synchronized (currentlyExecutingTasks) {
+            List<PrimeTask> finishedTasks = currentlyExecutingTasks.stream()
+                    .filter(task -> task.completed).collect(Collectors.toList());
+            currentlyExecutingTasks.removeAll(finishedTasks);
+            closedTasks.addAll(finishedTasks);
+        }
+
         switch (strategy) {
             case EqualScheduleing:
                 scheduleTasksEqually(clients, channel);
@@ -41,22 +52,15 @@ class Scheduler {
             case WattScheduleing:
                 scheduleTasksByWattUsage(clients, channel);
                 break;
+            case PerformanceScheduleing:
+                scheduleTasksByPerformance(clients, channel);
+                break;
         }
     }
 
     public void scheduleTasksEqually(List<RegisteredClient> clients, Channel channel) throws IOException {
-        if (!listening) {
-            listenForReturns(channel);
-            listening = true;
-        }
-
-        synchronized (currentlyExecutingTasks) {
-            List<PrimeTask> finishedTasks = currentlyExecutingTasks.stream().filter(task -> task.completed).collect(Collectors.toList());
-            currentlyExecutingTasks.removeAll(finishedTasks);
-            closedTasks.addAll(finishedTasks);
-        }
-
-        List<RegisteredClient> availableClients = clients.stream().filter(client -> client.tasksAssigned <= 10).collect(Collectors.toList());
+        List<RegisteredClient> availableClients = clients.stream()
+                .filter(client -> client.tasksAssigned <= 10).collect(Collectors.toList());
         for (RegisteredClient client : availableClients) {
             if (openTasks.isEmpty()) {
                 break;
@@ -66,17 +70,8 @@ class Scheduler {
     }
 
     public void scheduleTasksByWattUsage(List<RegisteredClient> clients, Channel channel) throws IOException {
-
-        if (!listening) {
-            listenForReturns(channel);
-            listening = true;
-        }
-        synchronized (currentlyExecutingTasks) {
-            List<PrimeTask> finishedTasks = currentlyExecutingTasks.stream().filter(task -> task.completed).collect(Collectors.toList());
-            currentlyExecutingTasks.removeAll(finishedTasks);
-            closedTasks.addAll(finishedTasks);
-        }
-        List<RegisteredClient> sortedClients = clients.stream().sorted(Comparator.comparingDouble(RegisteredClient::getWattUsage)).collect(Collectors.toList());
+        List<RegisteredClient> sortedClients = clients.stream()
+                .sorted(Comparator.comparingDouble(RegisteredClient::getWattUsage)).collect(Collectors.toList());
 
         for (RegisteredClient sortedClient : sortedClients) {
             //int maxTasksForClient = sortedClient.getWattUsage()
@@ -84,6 +79,62 @@ class Scheduler {
                 break;
             }
             assignAndStartTask(sortedClient, openTasks.poll(), channel);
+        }
+    }
+
+    /**
+     * Schedule tasks based on the average of the clients last 100 performance values
+     *
+     * @param clients
+     * @param channel
+     * @throws IOException
+     */
+    public void scheduleTasksByPerformance(List<RegisteredClient> clients, Channel channel) throws IOException {
+        final int MAX_TASKS_FOR_CLIENT = 50;
+
+        synchronized (clients) {
+            List<Double> clientAveragePerformance = clients.stream().map(client -> {
+                synchronized (client.executionDurations) {
+                    if (client.executionDurations.isEmpty()) {
+                        return 0.0;
+                    } else {
+                        if (client.executionDurations.size() > 100) {
+                            return client.executionDurations.stream().mapToLong(Long::longValue)
+                                    .skip(client.executionDurations.size() - 100).average().getAsDouble();
+                        } else {
+                            return client.executionDurations.stream().mapToLong(Long::longValue).average().getAsDouble();
+                        }
+                    }
+                }
+            }).collect(Collectors.toList());
+
+            double bestPerformanceAverage = clientAveragePerformance.stream().min(Double::compareTo).get();
+            double worstPerformanceAverage = clientAveragePerformance.stream().max(Double::compareTo).get();
+            double performanceDiff = worstPerformanceAverage - bestPerformanceAverage;
+            double performanceDiffStep = MAX_TASKS_FOR_CLIENT / performanceDiff;
+
+            int clientIndex = 0;
+            for (RegisteredClient client : clients) {
+                if (openTasks.isEmpty()) {
+                    break;
+                }
+                Double averagePerformance = clientAveragePerformance.get(clientIndex);
+                int tasksToAssign = 1;
+                if (averagePerformance != 0) {
+                    Double clientPerformanceDiff = averagePerformance - bestPerformanceAverage;
+                    tasksToAssign = (int)Math.ceil((clientPerformanceDiff * performanceDiffStep));
+                }
+
+                tasksToAssign -= client.tasksAssigned;
+
+                for (int i = 0; i < tasksToAssign; i++) {
+                    if (!openTasks.isEmpty()) {
+                        assignAndStartTask(client, openTasks.poll(), channel);
+                    }
+                }
+
+                clientIndex++;
+            }
         }
     }
 
@@ -99,11 +150,11 @@ class Scheduler {
         task.assignedClient = client;
         client.tasksAssigned++;
         currentlyExecutingTasks.add(task);
-        channel.basicPublish(PRODUCER_EXCHANGE_NAME, client.getProductionQueueName(), null, task.numberRowToCheck.getBytes());
+        channel.basicPublish(PRODUCER_EXCHANGE_NAME, client.getProductionQueueName(), null, task.numberToCheck.toString().getBytes());
     }
 
     private void listenForReturns(Channel channel) throws IOException {
-        channel.basicConsume(RabbitMQUtils.Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), true, "myConsumerTag2",getClientReturnConsumer(channel));
+        channel.basicConsume(RabbitMQUtils.Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), true, "myConsumerTag2", getClientReturnConsumer(channel));
     }
 
     private DefaultConsumer getClientReturnConsumer(Channel channel) {
@@ -115,33 +166,21 @@ class Scheduler {
 
                 if (primeTask.isPresent()) {
                     PrimeTask returnedTask = primeTask.get();
-                    returnedTask.isPrimeArr[returnedTask.numbers.indexOf(String.valueOf(clientReturn.numberToCheck))] = clientReturn.isPrime;
-                    returnedTask.completedArr[returnedTask.numbers.indexOf(String.valueOf(clientReturn.numberToCheck))] = true;
+                    returnedTask.isPrime= clientReturn.isPrime;
+                    returnedTask.completed = true;
                     returnedTask.assignedClient.tasksAssigned--;
 
-                    if (allTrue(returnedTask.completedArr)) {
-                        returnedTask.completed = true;
-                        closedTasks.add(returnedTask);
-                        currentlyExecutingTasks.remove(returnedTask);
-                    }
+                    closedTasks.add(returnedTask);
+                    currentlyExecutingTasks.remove(returnedTask);
                 }
 
             }
         };
     }
 
-    boolean allTrue(boolean[] arr) {
-        for (boolean b : arr) {
-            if (!b) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     public Optional<PrimeTask> getCurrentlyExecutedTask(int number) {
         synchronized (currentlyExecutingTasks) {
-            return currentlyExecutingTasks.stream().filter(currentTask -> currentTask.numbers.contains(String.valueOf(number))).findFirst();
+            return currentlyExecutingTasks.stream().filter(currentTask -> currentTask.numberToCheck == number).findFirst();
         }
     }
 

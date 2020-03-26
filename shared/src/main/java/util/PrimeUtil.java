@@ -29,20 +29,14 @@ public class PrimeUtil {
      * @param max
      * @return
      */
-    public static List<String> generateNumberRows(int max) {
+    public static List<Integer> generateNumberRows(int max) {
         System.out.println("Starting to generate numbers from 0 to " + max + "...");
 
-        List<String> numbers = new ArrayList<>();
+        List<Integer> numbers = new ArrayList<Integer>();
         StringBuilder temp = new StringBuilder();
 
         for (int i = 1; i <= max; i++) {
-            if (i % ANZAHL_ZAHLEN_PRO_MESSAGE != 0) {
-                temp.append(i).append(",");
-            } else {
-                temp.append(i);
-                numbers.add(temp.toString());
-                temp = new StringBuilder();
-            }
+            numbers.add(i);
         }
 
         System.out.println("Finished generating numbers");
