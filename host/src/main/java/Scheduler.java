@@ -138,7 +138,8 @@ class Scheduler {
                 int taskToAssignPre = tasksToAssign;
                 tasksToAssign -= client.tasksAssigned;
 
-                System.out.println("Assigning " + tasksToAssign + " to " + client.getName() + "total " + taskToAssignPre);
+                if(tasksToAssign > 0)
+                System.out.println("Assigning " + tasksToAssign + " to " + client.getName() + ". Total scheduled: " + taskToAssignPre);
 
                 for (int i = 0; i < tasksToAssign; i++) {
                     if (!openTasks.isEmpty()) {
