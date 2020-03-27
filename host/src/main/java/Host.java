@@ -129,13 +129,12 @@ class Host {
                 if (registeredClientOptional.isPresent()) {
                     RegisteredClient registeredClient = registeredClientOptional.get();
 
-                    synchronized (registeredClient.executionDurations) {
+                    synchronized (registeredClient) {
+                        if(registeredClient.executionDurations.size() > 5000) {
+                            registeredClient.executionDurations.clear();
+                        }
                         registeredClient.executionDurations.addAll(clientDataReturn.latestExecutionTimes);
                         registeredClient.setWattUsage(clientDataReturn.wattUsage);
-                        if (scheduler.tasksLeft()) {
-                            System.out.println("Client: " + registeredClient.executionDurations.size() + " " + registeredClient.getName());
-                        }
-                        System.out.println(registeredClient.getName() + ", " + registeredClient.getWattUsage());
                     }
                 }
             }

@@ -120,18 +120,21 @@ public class Client {
      * @throws IOException
      */
     private void listenForTasks() throws IOException {
-        channel.basicConsume(getProductionQueueName(), true, name,
-                new DefaultConsumer(channel) {
-                    @Override
-                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                        Integer numberToCheck = Integer.valueOf(new String(body));
-                        try {
-                            new Task().run(numberToCheck);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
+        channel.basicQos(1); // accept only one unack-ed message at a time (see below)
+
+        DeliverCallback deliverCallback = (name, delivery) -> {
+            Integer numberToCheck = Integer.valueOf(new String(delivery.getBody()));
+            try {
+                new Task().run(numberToCheck);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+            }
+        };
+        boolean autoAck = false;
+        channel.basicConsume(getProductionQueueName(), autoAck, deliverCallback, consumerTag -> {
+        });
     }
 
     /**
@@ -170,6 +173,7 @@ public class Client {
             clientReturn.isPrime = isPrime;
             clientReturn.numberToCheck = numberToCheck;
             clientReturn.name = name;
+            System.out.println("Returned " + numberToCheck);
             channel.basicPublish(CONSUMER_EXCHANGE_NAME, Queue.CONSUMER_DATA_RETURN_QUEUE.getName(), null, SerializationUtils.serialize(clientReturn));
         }
     }

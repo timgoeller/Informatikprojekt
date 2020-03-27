@@ -83,7 +83,7 @@ class Scheduler {
     }
 
     /**
-     * Schedule tasks based on the average of the clients last 100 performance values
+     * Schedule tasks based on the average of the clients last 50 performance values
      *
      * @param clients
      * @param channel
@@ -108,8 +108,15 @@ class Scheduler {
                 }
             }).collect(Collectors.toList());
 
-            double bestPerformanceAverage = clientAveragePerformance.stream().min(Double::compareTo).get();
-            double worstPerformanceAverage = clientAveragePerformance.stream().max(Double::compareTo).get();
+            Optional<Double> bestPerformanceAverageOpt = clientAveragePerformance.stream().min(Double::compareTo);
+            Optional<Double> worstPerformanceAverageOpt = clientAveragePerformance.stream().max(Double::compareTo);
+            Double bestPerformanceAverage = 0.0;
+            Double worstPerformanceAverage = 0.0;
+            if (bestPerformanceAverageOpt.isPresent()) {
+                bestPerformanceAverage = bestPerformanceAverageOpt.get();
+                worstPerformanceAverage = worstPerformanceAverageOpt.get();
+            }
+
             double performanceDiff = worstPerformanceAverage - bestPerformanceAverage;
             double performanceDiffStep = MAX_TASKS_FOR_CLIENT / performanceDiff;
 
@@ -119,13 +126,19 @@ class Scheduler {
                     break;
                 }
                 Double averagePerformance = clientAveragePerformance.get(clientIndex);
-                int tasksToAssign = 1;
+                int tasksToAssign = 0;
                 if (averagePerformance != 0) {
                     Double clientPerformanceDiff = averagePerformance - bestPerformanceAverage;
-                    tasksToAssign = (int)Math.ceil((clientPerformanceDiff * performanceDiffStep));
+                    tasksToAssign = (int) (clientPerformanceDiff * performanceDiffStep);
                 }
 
+                if (tasksToAssign <= 0) {
+                    tasksToAssign = 1;
+                }
+                int taskToAssignPre = tasksToAssign;
                 tasksToAssign -= client.tasksAssigned;
+
+                System.out.println("Assigning " + tasksToAssign + " to " + client.getName() + "total " + taskToAssignPre);
 
                 for (int i = 0; i < tasksToAssign; i++) {
                     if (!openTasks.isEmpty()) {
@@ -165,11 +178,14 @@ class Scheduler {
                 Optional<PrimeTask> primeTask = getCurrentlyExecutedTask(clientReturn.numberToCheck);
 
                 if (primeTask.isPresent()) {
+                    //System.out.println("Task returned: " + clientReturn.numberToCheck);
                     PrimeTask returnedTask = primeTask.get();
-                    returnedTask.isPrime= clientReturn.isPrime;
-                    returnedTask.completed = true;
-                    returnedTask.assignedClient.tasksAssigned--;
 
+                    returnedTask.isPrime = clientReturn.isPrime;
+                    returnedTask.completed = true;
+                    synchronized (returnedTask.assignedClient) {
+                        returnedTask.assignedClient.tasksAssigned--;
+                    }
                     closedTasks.add(returnedTask);
                     currentlyExecutingTasks.remove(returnedTask);
                 }
